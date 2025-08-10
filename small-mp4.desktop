@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Small MP4
+GenericName=Video Compressor
+Comment=Squeeze your videos for easy sharing
+Exec=small-mp4 gui
+Icon=small-mp4
+Terminal=false
+Categories=AudioVideo;Video;
+Keywords=video;compression;ffmpeg;mp4;
+MimeType=video/mp4;video/x-matroska;video/webm;video/quicktime;video/x-msvideo;video/x-flv;video/mpeg;

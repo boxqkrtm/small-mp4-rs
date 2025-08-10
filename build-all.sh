@@ -113,3 +113,39 @@ ls -la "$BUILD_DIR"
 
 echo ""
 echo "🎉 Cross-compilation completed!"
+
+# Build distribution packages
+echo ""
+echo "📦 Building distribution packages..."
+
+# Build Arch Linux package
+if command -v makepkg &> /dev/null; then
+    echo "🏗️  Building Arch Linux package..."
+    makepkg -f --noconfirm
+    if [ $? -eq 0 ]; then
+        echo "✅ Arch package built successfully"
+        mv *.pkg.tar.zst "$BUILD_DIR/" 2>/dev/null || true
+    else
+        echo "❌ Arch package build failed"
+    fi
+else
+    echo "⚠️  makepkg not found, skipping Arch package"
+fi
+
+# Build Debian package
+if command -v dpkg-buildpackage &> /dev/null; then
+    echo "🏗️  Building Debian package..."
+    dpkg-buildpackage -us -uc -b
+    if [ $? -eq 0 ]; then
+        echo "✅ Debian package built successfully"
+        mv ../*.deb "$BUILD_DIR/" 2>/dev/null || true
+    else
+        echo "❌ Debian package build failed"
+    fi
+else
+    echo "⚠️  dpkg-buildpackage not found, skipping Debian package"
+fi
+
+echo ""
+echo "📁 All build artifacts in: $BUILD_DIR"
+ls -la "$BUILD_DIR"

@@ -1,0 +1,15 @@
+pkgbase = small-mp4
+	pkgdesc = Squeeze your videos for easy sharing - Now with hardware acceleration!
+	pkgver = 0.2.0
+	pkgrel = 1
+	url = https://github.com/small-mp4/small-mp4-rs
+	arch = x86_64
+	license = MIT
+	makedepends = cargo
+	depends = ffmpeg
+	depends = gtk3
+	optdepends = nvidia-utils: NVIDIA hardware acceleration support
+	optdepends = mesa: AMD/Intel hardware acceleration support
+	optdepends = libva: VAAPI hardware acceleration support
+
+pkgname = small-mp4

@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use log::{debug, info, warn};
 use std::process::Command;
 

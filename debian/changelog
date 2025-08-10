@@ -1,0 +1,8 @@
+small-mp4 (0.2.0-1) unstable; urgency=medium
+
+  * Initial release
+  * Video compression tool with hardware acceleration support
+  * GUI and CLI interfaces
+  * Support for NVIDIA, AMD, Intel hardware acceleration
+
+ -- Small MP4 Team <team@small-mp4.com>  Mon, 10 Aug 2025 00:00:00 +0000

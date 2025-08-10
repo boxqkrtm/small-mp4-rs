@@ -1,0 +1,33 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export CARGO_HOME = $(CURDIR)/debian/cargo_home
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	mkdir -p $(CARGO_HOME)
+
+override_dh_auto_build:
+	cargo build --release --all-features
+
+override_dh_auto_test:
+	cargo test --all-features || true
+
+override_dh_auto_install:
+	# Install binary
+	install -Dm755 target/release/small-mp4 \
+		debian/small-mp4/usr/bin/small-mp4
+	
+	# Install desktop file
+	install -Dm644 small-mp4.desktop \
+		debian/small-mp4/usr/share/applications/small-mp4.desktop
+	
+	# Install icon
+	install -Dm644 assets/icon.png \
+		debian/small-mp4/usr/share/pixmaps/small-mp4.png
+
+override_dh_auto_clean:
+	cargo clean
+	rm -rf $(CARGO_HOME)

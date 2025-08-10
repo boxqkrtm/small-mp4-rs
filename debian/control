@@ -1,0 +1,30 @@
+Source: small-mp4
+Section: video
+Priority: optional
+Maintainer: Small MP4 Team <team@small-mp4.com>
+Build-Depends: debhelper-compat (= 13),
+               cargo,
+               rustc,
+               libgtk-3-dev,
+               pkg-config
+Standards-Version: 4.6.0
+Homepage: https://github.com/small-mp4/small-mp4-rs
+Rules-Requires-Root: no
+
+Package: small-mp4
+Architecture: amd64
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         ffmpeg,
+         libgtk-3-0
+Recommends: nvidia-cuda-toolkit | mesa-va-drivers | intel-media-va-driver
+Description: Squeeze your videos for easy sharing
+ Small MP4 is a video compression tool designed to reduce video file sizes
+ for easy sharing and uploading. The tool supports both GUI (egui) and CLI
+ interfaces with hardware acceleration capabilities.
+ .
+ Features:
+  - Target file size control (1MB to 50MB)
+  - Hardware acceleration support (NVIDIA, AMD, Intel)
+  - Both GUI and CLI interfaces
+  - Batch processing support
