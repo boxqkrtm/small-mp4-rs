@@ -124,7 +124,7 @@ impl SmallMp4App {
         match self.config.language {
             Language::Korean => match key {
                 "title" => "작은mp4 - 동영상 압축기".to_string(),
-                "drag_drop" => "동영상 파일을 여기에 끌어다 놓으세요".to_string(),
+                "drag_drop" => "동영상 파일을 선택해주세요".to_string(),
                 "browse" => "찾아보기".to_string(),
                 "target_size" => "목표 크기:".to_string(),
                 "auto" => "자동".to_string(),
@@ -148,7 +148,7 @@ impl SmallMp4App {
             },
             Language::Japanese => match key {
                 "title" => "小さなmp4 - 動画圧縮ツール".to_string(), 
-                "drag_drop" => "動画ファイルをここにドラッグ&ドロップ".to_string(),
+                "drag_drop" => "動画ファイルを選択してください".to_string(),
                 "browse" => "参照".to_string(),
                 "target_size" => "目標サイズ:".to_string(),
                 "auto" => "自動".to_string(),
@@ -172,7 +172,7 @@ impl SmallMp4App {
             },
             Language::English => match key {
                 "title" => "Small MP4 - Video Compressor".to_string(),
-                "drag_drop" => "Drag & drop video files here".to_string(),
+                "drag_drop" => "Please select a video file".to_string(),
                 "browse" => "Browse...".to_string(),
                 "target_size" => "Target Size:".to_string(),
                 "auto" => "Auto".to_string(),
