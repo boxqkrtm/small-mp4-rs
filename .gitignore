@@ -73,6 +73,9 @@ ffprobe.exe
 *.exe
 *.AppImage
 
+# Package directory
+pkg/
+
 # Local configuration
 .env.local
 config.local.*
