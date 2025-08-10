@@ -1,8 +1,12 @@
 # 🎬 Small MP4 - Modern Video Compressor
 
-> **English**: Squeeze your videos for easy sharing  
-> **한국어**: 동영상 공유를 위해서 영상을 꾸겨줍니다  
-> **日本語**: 動画共有のために映像を圧縮します
+<div align="center">
+  
+[English](README.md) | [한국어](docs/README-ko.md) | [日本語](docs/README-ja.md)
+
+> Squeeze your videos for easy sharing
+
+</div>
 
 A fast, efficient video compression tool with hardware acceleration and native GUI built with Rust and egui.
 
@@ -49,20 +53,18 @@ A fast, efficient video compression tool with hardware acceleration and native G
 
 ## 📦 Installation & Usage
 
-Small MP4는 **두 가지 인터페이스**를 제공합니다:
+Small MP4 provides **two interfaces**:
 
-### 🖥️ 사용 방법
-
-| 인터페이스 | 실행 방법 | 특징 | 권장 용도 |
-|---------|----------|------|----------|
-| **⚡ Native GUI** | `cargo run` | 빠른 실행, 가벼움, Rust 네이티브 | **일반 사용자 추천** |
-| **💻 CLI 도구** | `cargo run compress video.mp4` | 명령줄 인터페이스 | **자동화, 스크립팅** |
+| Interface | Launch Method | Features | Recommended For |
+|-----------|--------------|----------|-----------------|
+| **⚡ Native GUI** | `cargo run` | Fast startup, lightweight, Rust native | **General users** |
+| **💻 CLI Tool** | `cargo run compress video.mp4` | Command-line interface | **Automation, scripting** |
 
 ## 🚀 Quick Start
 
-### Option 1: Native GUI (빠른 실행 ⚡)
+### Option 1: Native GUI (Fast Launch ⚡)
 
-Rust native egui를 사용한 경량 GUI로, 빠른 실행과 낮은 메모리 사용량이 장점입니다.
+Lightweight GUI using Rust native egui with fast startup and low memory usage.
 
 ```bash
 # Clone the repository
@@ -76,15 +78,15 @@ cargo run
 cargo build --release
 ```
 
-#### 주요 기능:
+#### Key Features:
 - ⚡ Fast native Rust GUI
 - 💾 Low memory usage
 - 🔧 Direct hardware controls
 - 📊 Detailed hardware information
 
-### Option 2: Command Line Interface (자동화 💻)
+### Option 2: Command Line Interface (Automation 💻)
 
-프로그래밍 자동화와 배치 처리를 위한 강력한 CLI 도구입니다.
+Powerful CLI tool for automation and batch processing.
 
 ```bash
 # Clone the repository
@@ -96,11 +98,11 @@ cargo build --release
 
 # Basic usage examples
 cargo run compress input.mp4 --size 10mb
-cargo run compress input.mov --auto --hw-encoder nvenc-h264
+cargo run compress input.mov --hw-encoder nvenc-h264
 cargo run list-hw  # Show available hardware
 ```
 
-#### 주요 기능:
+#### Key Features:
 - 🤖 Batch processing support
 - 🔧 Full hardware control options
 - 📊 Detailed hardware detection
@@ -135,9 +137,6 @@ small-mp4 compress input.mov --size 10mb
 
 # Force software encoding
 small-mp4 compress input.mov --size 5mb --force-software
-
-# Auto-size based on quality
-small-mp4 compress input.mov --auto --hw-encoder nvenc-h264
 ```
 
 #### Hardware-Specific Options
@@ -196,7 +195,6 @@ async fn main() -> anyhow::Result<()> {
     
     // Configure settings
     let settings = CompressionSettings {
-        auto_size: false,
         target_size: TargetSize::Size10MB,
         hardware_encoder: HardwareEncoder::NvencH264,
         enable_hardware_accel: true,
@@ -273,7 +271,7 @@ Based on internal testing with various hardware configurations:
 ### GUI Display Issues
 
 #### Wayland Display Error
-If you see `Gdk-Message: Error 71 (규약 오류) dispatching to Wayland display`:
+If you see `Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display`:
 
 ```bash
 # Try running with X11 fallback
@@ -316,24 +314,6 @@ The tool includes automatic fallback:
 - Enable memory optimization (`--memory-opt`)
 - Try different encoder
 
-## 📊 Size Estimation
-
-The tool provides intelligent size estimation based on:
-- Input video characteristics (resolution, bitrate, complexity)
-- Encoder efficiency profiles
-- Target quality settings
-- Content analysis
-
-Example estimation output:
-```
-📊 Compression Estimation:
-  Target Size: 10.0 MB
-  Estimated Quality: 85% (CRF 24)
-  Encoding Time: ~45 seconds
-  Compression Ratio: 12.5:1
-  Encoder: NVIDIA NVENC H.264
-```
-
 ## 🤝 Contributing
 
 Contributions welcome! Areas of interest:
@@ -349,8 +329,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **ez-ffmpeg**: Rust FFmpeg bindings
 - **FFmpeg**: Core video processing
+- **egui**: Native Rust GUI framework
 - **NVIDIA**: NVENC hardware acceleration
 - **AMD**: VCE hardware acceleration  
 - **Intel**: QuickSync hardware acceleration
