@@ -144,6 +144,8 @@ impl SmallMp4App {
                 "enable_hardware_accel" => "하드웨어 가속 활성화".to_string(),
                 "memory_optimization" => "메모리 최적화".to_string(),
                 "advanced_settings" => "고급 설정".to_string(),
+                "change" => "변경".to_string(),
+                "clear" => "지우기".to_string(),
                 _ => key.to_string(),
             },
             Language::Japanese => match key {
@@ -168,6 +170,8 @@ impl SmallMp4App {
                 "enable_hardware_accel" => "ハードウェアアクセラレーション有効化".to_string(),
                 "memory_optimization" => "メモリ最適化".to_string(),
                 "advanced_settings" => "詳細設定".to_string(),
+                "change" => "変更".to_string(),
+                "clear" => "クリア".to_string(),
                 _ => key.to_string(),
             },
             Language::English => match key {
@@ -192,6 +196,8 @@ impl SmallMp4App {
                 "enable_hardware_accel" => "Enable hardware acceleration".to_string(),
                 "memory_optimization" => "Memory optimization".to_string(),
                 "advanced_settings" => "Advanced Settings".to_string(),
+                "change" => "Change".to_string(),
+                "clear" => "Clear".to_string(),
                 _ => key.to_string(),
             },
         }
@@ -277,26 +283,34 @@ impl SmallMp4App {
         ui.vertical(|ui| {
             // Input file
             ui.label("Input:");
-            ui.horizontal(|ui| {
-                // File path display
-                let file_text = {
-                    if let Ok(state_guard) = self.state.lock() {
-                        state_guard.input_file
-                            .as_ref()
-                            .map(|p| p.to_string_lossy().to_string())
-                            .unwrap_or_else(|| self.get_text("drag_drop").to_string())
-                    } else {
-                        self.get_text("drag_drop").to_string()
-                    }
+            
+            let has_file = {
+                if let Ok(state_guard) = self.state.lock() {
+                    state_guard.input_file.is_some()
+                } else {
+                    false
+                }
+            };
+            
+            if !has_file {
+                // Large drag & drop area when no file is selected
+                let drag_drop_text = match self.config.language {
+                    Language::Korean => "여기를 클릭하거나 동영상 파일을 끌어다 놓으세요\n(Wayland 환경에서는 클릭해서 파일을 선택하세요)",
+                    Language::Japanese => "ここをクリックするか動画ファイルをドラッグ&ドロップ\n(Waylandの場合はクリックしてファイルを選択)",
+                    Language::English => "Click here or drag & drop video files\n(For Wayland, please click to select files)",
                 };
-                    
-                ui.add_sized([350.0, 25.0], egui::TextEdit::singleline(&mut file_text.as_str())
-                    .interactive(false));
                 
-                // Browse button
-                if ui.button(self.get_text("browse")).clicked() {
+                let response = ui.add_sized(
+                    [450.0, 80.0],
+                    egui::Button::new(drag_drop_text)
+                        .fill(egui::Color32::from_gray(50))
+                        .stroke(egui::Stroke::new(2.0, egui::Color32::from_gray(100)))
+                );
+                
+                if response.clicked() {
                     if let Some(path) = rfd::FileDialog::new()
-                        .add_filter("Video files", &["mp4", "avi", "mov", "mkv", "flv", "wmv"])
+                        .add_filter("Video files", &["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm", "m4v"])
+                        .set_title("Select Video File")
                         .pick_file() 
                     {
                         if let Ok(mut state_guard) = self.state.lock() {
@@ -304,7 +318,48 @@ impl SmallMp4App {
                         }
                     }
                 }
-            });
+            } else {
+                // Compact display when file is selected
+                ui.horizontal(|ui| {
+                    // File path display
+                    let file_text = {
+                        if let Ok(state_guard) = self.state.lock() {
+                            state_guard.input_file
+                                .as_ref()
+                                .map(|p| p.file_name()
+                                    .map(|name| name.to_string_lossy().to_string())
+                                    .unwrap_or_else(|| p.to_string_lossy().to_string())
+                                )
+                                .unwrap_or_else(|| "No file".to_string())
+                        } else {
+                            "No file".to_string()
+                        }
+                    };
+                        
+                    ui.add_sized([300.0, 25.0], egui::TextEdit::singleline(&mut file_text.as_str())
+                        .interactive(false));
+                    
+                    // Change file button
+                    if ui.button(format!("📁 {}", self.get_text("change"))).clicked() {
+                        if let Some(path) = rfd::FileDialog::new()
+                            .add_filter("Video files", &["mp4", "avi", "mov", "mkv", "flv", "wmv", "webm", "m4v"])
+                            .set_title("Select Video File")
+                            .pick_file() 
+                        {
+                            if let Ok(mut state_guard) = self.state.lock() {
+                                state_guard.set_input_file(path);
+                            }
+                        }
+                    }
+                    
+                    // Clear file button
+                    if ui.button(format!("❌ {}", self.get_text("clear"))).clicked() {
+                        if let Ok(mut state_guard) = self.state.lock() {
+                            state_guard.input_file = None;
+                        }
+                    }
+                });
+            }
             
             ui.add_space(5.0);
             
