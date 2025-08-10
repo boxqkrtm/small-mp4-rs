@@ -123,7 +123,7 @@ impl CompressionEngine {
         // Check if we should use 2-pass encoding
         let use_two_pass = match &settings.hardware_encoder {
             HardwareEncoder::Software => true,
-            HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => true,
+            // NVENC doesn't support traditional 2-pass, uses multipass instead
             _ => false,
         };
         
@@ -204,9 +204,10 @@ impl CompressionEngine {
             HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => {
                 let preset = settings.hardware_preset.nvenc_preset();
                 cmd.arg("-preset").arg(preset);
-                // Use CBR for precise size control
-                cmd.arg("-rc").arg("cbr");
-                cmd.arg("-2pass").arg("1");
+                // Use VBR with multipass for better quality and size control
+                cmd.arg("-rc").arg("vbr");
+                cmd.arg("-multipass").arg("fullres");
+                cmd.arg("-cq").arg("0"); // Let bitrate control quality
             },
             HardwareEncoder::AmfH264 | HardwareEncoder::AmfH265 => {
                 cmd.arg("-quality").arg("speed");
@@ -581,7 +582,10 @@ impl CompressionEngine {
             HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => {
                 let preset = settings.hardware_preset.nvenc_preset();
                 cmd.arg("-preset").arg(preset);
-                // For 2-pass, we don't set rc mode here as it's handled by -pass
+                // NVENC uses multipass for better quality
+                cmd.arg("-rc").arg("vbr");
+                cmd.arg("-multipass").arg("fullres");
+                cmd.arg("-cq").arg("0");
             },
             HardwareEncoder::AmfH264 | HardwareEncoder::AmfH265 => {
                 cmd.arg("-quality").arg("speed");
