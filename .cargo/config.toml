@@ -1,0 +1,24 @@
+# Cross-compilation configuration for Small MP4
+
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+
+[target.x86_64-pc-windows-msvc]
+# Windows MSVC requires Visual Studio Build Tools or cross compiler
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+[target.x86_64-unknown-linux-musl]
+linker = "musl-gcc"
+
+[target.aarch64-pc-windows-msvc]
+# Windows ARM64 requires Visual Studio Build Tools or cross compiler
+# Use lld-link if available
+# linker = "lld-link"
+
+[target.aarch64-apple-darwin]
+# Requires macOS SDK for cross-compilation
+
+[target.x86_64-apple-darwin]
+# Requires macOS SDK for cross-compilation
