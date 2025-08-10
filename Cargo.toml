@@ -40,6 +40,10 @@ walkdir = "2.0"
 # Configuration
 config = "0.14"
 
+# Regex for parsing
+regex = "1.10"
+lazy_static = "1.4"
+
 [features]
 default = ["hardware-accel", "cli", "gui"]
 
