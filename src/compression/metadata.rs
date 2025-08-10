@@ -42,6 +42,10 @@ pub async fn get_video_metadata(video_path: &Path) -> Result<VideoMetadata> {
     let video_stream = streams.iter()
         .find(|s| s["codec_type"] == "video")
         .ok_or_else(|| anyhow!("No video stream found"))?;
+    
+    // Check if audio stream exists
+    let has_audio = streams.iter()
+        .any(|s| s["codec_type"] == "audio");
 
     // Extract format information
     let format = &json["format"];
@@ -84,6 +88,7 @@ pub async fn get_video_metadata(video_path: &Path) -> Result<VideoMetadata> {
         bitrate_kbps,
         codec,
         estimated_complexity: ContentComplexity::Medium,
+        has_audio,
     };
 
     // Estimate content complexity based on bitrate

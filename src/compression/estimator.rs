@@ -205,6 +205,7 @@ pub struct VideoMetadata {
     pub bitrate_kbps: Option<u32>,
     pub codec: String,
     pub estimated_complexity: ContentComplexity,
+    pub has_audio: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -242,6 +243,7 @@ impl VideoMetadata {
             bitrate_kbps: Some(5000),
             codec: "h264".to_string(),
             estimated_complexity: ContentComplexity::Medium,
+            has_audio: true,
         }
     }
     

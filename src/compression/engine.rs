@@ -506,18 +506,23 @@ impl CompressionEngine {
             },
         }
         
-        // Configure audio encoding based on duration
-        let audio_bitrate = if metadata.duration_seconds > 600.0 {
-            "96k"  // 96 kbps for videos > 10 minutes
-        } else if metadata.duration_seconds > 300.0 {
-            "112k"  // 112 kbps for videos > 5 minutes
+        // Configure audio encoding
+        if metadata.has_audio {
+            let audio_bitrate = if metadata.duration_seconds > 600.0 {
+                "96k"  // 96 kbps for videos > 10 minutes
+            } else if metadata.duration_seconds > 300.0 {
+                "112k"  // 112 kbps for videos > 5 minutes
+            } else {
+                "128k"  // 128 kbps for shorter videos
+            };
+            
+            cmd.arg("-c:a").arg("aac");
+            cmd.arg("-b:a").arg(audio_bitrate);
+            cmd.arg("-ac").arg("2"); // Stereo
         } else {
-            "128k"  // 128 kbps for shorter videos
-        };
-        
-        cmd.arg("-c:a").arg("aac");
-        cmd.arg("-b:a").arg(audio_bitrate);
-        cmd.arg("-ac").arg("2"); // Stereo
+            // No audio stream - remove audio from output
+            cmd.arg("-an");
+        }
         
         // Output format settings
         cmd.arg("-movflags").arg("+faststart");
@@ -542,15 +547,19 @@ impl CompressionEngine {
         let total_bits = target_mb * 8.0 * 1024.0 * 1024.0;
         
         // Dynamic audio bitrate calculation
-        // Use lower audio bitrate for longer videos to save space
-        let audio_bitrate = if duration_seconds > 600.0 {
-            96.0  // 96 kbps for videos > 10 minutes
-        } else if duration_seconds > 300.0 {
-            112.0  // 112 kbps for videos > 5 minutes
+        // Only reserve space for audio if the video has audio
+        let (audio_bitrate, audio_bits) = if metadata.has_audio {
+            let bitrate = if duration_seconds > 600.0 {
+                96.0  // 96 kbps for videos > 10 minutes
+            } else if duration_seconds > 300.0 {
+                112.0  // 112 kbps for videos > 5 minutes
+            } else {
+                128.0  // 128 kbps for shorter videos
+            };
+            (bitrate, bitrate * 1024.0 * duration_seconds)
         } else {
-            128.0  // 128 kbps for shorter videos
+            (0.0, 0.0)  // No audio, no bits reserved
         };
-        let audio_bits = audio_bitrate * 1024.0 * duration_seconds;
         
         // Reserve 1% for container overhead (reduced from 2%)
         let container_overhead = total_bits * 0.01;
