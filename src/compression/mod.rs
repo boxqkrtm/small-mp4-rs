@@ -9,9 +9,7 @@ pub use estimator::SizeEstimator;
 pub use size_presets::TargetSize;
 
 use anyhow::Result;
-use std::path::{Path, PathBuf};
-use log::{info, warn, error};
-use tokio::fs;
+use log::warn;
 
 use hardware::{HardwareCapabilities, HardwareEncoder, HardwarePreset, HardwareQuality};
 use crate::cli::CompressionCliSettings;
@@ -20,6 +18,7 @@ use crate::cli::CompressionCliSettings;
 pub struct CompressionSettings {
     // Existing fields
     pub target_size: TargetSize,
+    #[allow(dead_code)]
     pub estimated_size_mb: Option<f32>,
     
     // New hardware acceleration fields
@@ -27,7 +26,9 @@ pub struct CompressionSettings {
     pub enable_hardware_accel: bool,
     pub cuda_device_id: Option<u32>,
     pub hardware_preset: HardwarePreset,
+    #[allow(dead_code)]
     pub hardware_quality: HardwareQuality,
+    #[allow(dead_code)]
     pub force_software_fallback: bool,
     pub memory_optimization: bool,
     pub compatibility_mode: bool,  // Force x264 for maximum compatibility
@@ -76,6 +77,7 @@ impl CompressionSettings {
         })
     }
     
+    #[allow(dead_code)]
     pub fn get_effective_target_mb(&self) -> Option<f32> {
         Some(self.target_size.as_mb())
     }

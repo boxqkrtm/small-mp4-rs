@@ -1,4 +1,6 @@
-use anyhow::{Result, anyhow};
+#![allow(dead_code)]
+use anyhow::Result;
+use anyhow::anyhow;
 use log::{debug, info, warn};
 use sysinfo::System;
 use std::process::Command;
@@ -130,7 +132,7 @@ async fn query_cuda_devices_fallback() -> Result<Vec<CudaDevice>> {
     // If nvidia-smi is not available, try to infer from system information
     // This is a basic fallback that assumes common scenarios
     
-    let system = System::new_all();
+    let _system = System::new_all();
     
     // Look for NVIDIA GPUs in system info
     // This is a simplified approach - in a real implementation you might want to use

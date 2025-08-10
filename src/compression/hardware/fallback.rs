@@ -1,4 +1,6 @@
-use anyhow::{Result, anyhow};
+#![allow(dead_code)]
+use anyhow::Result;
+use anyhow::anyhow;
 use log::{info, warn, error, debug};
 use std::collections::HashMap;
 

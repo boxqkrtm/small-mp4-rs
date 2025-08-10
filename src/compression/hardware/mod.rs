@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod detection;
 pub mod cuda;
 pub mod amd;
@@ -5,12 +7,11 @@ pub mod intel;
 pub mod platform;
 pub mod fallback;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use log::{info, warn, error, debug};
+use log::{info, debug};
 
-pub use detection::detect_hardware_capabilities;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum HardwareEncoder {

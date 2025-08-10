@@ -1,4 +1,4 @@
-use eframe::egui::{self, *};
+use eframe::egui::{self};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
@@ -48,7 +48,7 @@ impl Default for SmallMp4App {
 
 impl SmallMp4App {
     pub fn new(hw_capabilities: HardwareCapabilities) -> Self {
-        let mut app = Self::default();
+        let app = Self::default();
         
         // Set hardware capabilities
         *app.hardware_capabilities.lock().unwrap() = Some(hw_capabilities.clone());

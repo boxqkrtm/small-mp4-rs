@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use env_logger;
-use log::{error, info, warn};
+use log::{info, warn};
 
 mod compression;
 mod cli;

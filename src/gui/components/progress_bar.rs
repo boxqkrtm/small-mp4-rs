@@ -50,7 +50,7 @@ impl ProgressBar {
                 [ui.available_width(), bar_height].into()
             );
             
-            let bar_response = ui.allocate_rect(bar_rect, Sense::hover());
+            let _bar_response = ui.allocate_rect(bar_rect, Sense::hover());
             
             // Background
             ui.painter().rect(

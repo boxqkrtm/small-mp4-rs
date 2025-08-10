@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use anyhow::{Result, anyhow};
 use log::{info, warn, error, debug};
 use std::path::{Path, PathBuf};

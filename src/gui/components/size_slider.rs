@@ -110,10 +110,14 @@ impl SizeSlider {
             // Progress bar showing relative size
             let progress = match current_size {
                 TargetSize::Size1MB => 0.1,
-                TargetSize::Size5MB => 0.3,
-                TargetSize::Size10MB => 0.5,
-                TargetSize::Size30MB => 0.8,
-                TargetSize::Size50MB => 1.0,
+                TargetSize::Size5MB => 0.2,
+                TargetSize::Size10MB => 0.3,
+                TargetSize::Size30MB => 0.4,
+                TargetSize::Size50MB => 0.5,
+                TargetSize::Size100MB => 0.6,
+                TargetSize::Size250MB => 0.7,
+                TargetSize::Size500MB => 0.8,
+                TargetSize::Size1000MB => 1.0,
             };
             
             let bar_rect = Rect::from_min_size(

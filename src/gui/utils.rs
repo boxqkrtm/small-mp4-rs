@@ -1,8 +1,9 @@
-use std::path::Path;
+
 
 /// GUI utility functions
 pub mod file_utils {
     use std::path::Path;
+    
     
     /// Check if a file is a video file based on extension
     pub fn is_video_file(path: &Path) -> bool {

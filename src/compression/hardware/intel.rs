@@ -1,4 +1,5 @@
-use anyhow::{Result, anyhow};
+#![allow(dead_code)]
+use anyhow::Result;
 use log::{debug, info, warn};
 use std::process::Command;
 
@@ -265,7 +266,9 @@ async fn get_intel_gpu_info_linux() -> Result<Vec<IntelGpuInfo>> {
     if let Ok(output) = Command::new("lspci").args(&["-v"]).output() {
         let output_str = String::from_utf8_lossy(&output.stdout);
         
-        for section in output_str.split("\n\n") {
+        for section in output_str.split("
+
+") {
             if section.to_lowercase().contains("intel") && 
                (section.to_lowercase().contains("vga") || 
                 section.to_lowercase().contains("display")) {

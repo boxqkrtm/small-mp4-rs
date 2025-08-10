@@ -1,6 +1,7 @@
+#![allow(dead_code)]
 use sysinfo::{System, Disks};
-use std::collections::HashMap;
-use log::{debug, info};
+
+use log::debug;
 
 #[derive(Debug, Clone)]
 pub struct SystemInformation {
