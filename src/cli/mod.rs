@@ -67,6 +67,10 @@ pub struct CompressionCliSettings {
     #[arg(long)]
     pub memory_opt: bool,
     
+    /// Compatibility mode - Force x264 codec for maximum compatibility
+    #[arg(long)]
+    pub compatibility: bool,
+    
     /// Language for output messages
     #[arg(short, long, value_enum, default_value = "en")]
     pub lang: Language,

@@ -141,18 +141,23 @@ impl CompressionEngine {
         cmd.arg("-y"); // Overwrite output file
         
         // Configure video codec
-        let codec = match &settings.hardware_encoder {
-            HardwareEncoder::NvencH264 => "h264_nvenc",
-            HardwareEncoder::NvencH265 => "hevc_nvenc",
-            HardwareEncoder::NvencAV1 => "av1_nvenc",
-            HardwareEncoder::AmfH264 => "h264_amf",
-            HardwareEncoder::AmfH265 => "hevc_amf",
-            HardwareEncoder::QsvH264 => "h264_qsv",
-            HardwareEncoder::QsvH265 => "hevc_qsv",
-            HardwareEncoder::QsvAV1 => "av1_qsv",
-            HardwareEncoder::Vaapi => "h264_vaapi",
-            HardwareEncoder::VideoToolbox => "h264_videotoolbox",
-            HardwareEncoder::Software => "libx264",
+        let codec = if settings.compatibility_mode {
+            // Force x264 for maximum compatibility
+            "libx264"
+        } else {
+            match &settings.hardware_encoder {
+                HardwareEncoder::NvencH264 => "h264_nvenc",
+                HardwareEncoder::NvencH265 => "hevc_nvenc",
+                HardwareEncoder::NvencAV1 => "av1_nvenc",
+                HardwareEncoder::AmfH264 => "h264_amf",
+                HardwareEncoder::AmfH265 => "hevc_amf",
+                HardwareEncoder::QsvH264 => "h264_qsv",
+                HardwareEncoder::QsvH265 => "hevc_qsv",
+                HardwareEncoder::QsvAV1 => "av1_qsv",
+                HardwareEncoder::Vaapi => "h264_vaapi",
+                HardwareEncoder::VideoToolbox => "h264_videotoolbox",
+                HardwareEncoder::Software => "libx264",
+            }
         };
         
         cmd.arg("-c:v").arg(codec);
@@ -163,11 +168,15 @@ impl CompressionEngine {
         cmd.arg("-bufsize").arg(format!("{}k", target_bitrate * 2));
         
         // Set preset based on hardware
-        match &settings.hardware_encoder {
-            HardwareEncoder::Software => {
-                let preset = settings.hardware_preset.software_preset();
-                cmd.arg("-preset").arg(preset);
-            },
+        if settings.compatibility_mode {
+            // Use medium preset for compatibility mode
+            cmd.arg("-preset").arg("medium");
+        } else {
+            match &settings.hardware_encoder {
+                HardwareEncoder::Software => {
+                    let preset = settings.hardware_preset.software_preset();
+                    cmd.arg("-preset").arg(preset);
+                },
             HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => {
                 let preset = settings.hardware_preset.nvenc_preset();
                 cmd.arg("-preset").arg(preset);
@@ -178,18 +187,19 @@ impl CompressionEngine {
             HardwareEncoder::AmfH264 | HardwareEncoder::AmfH265 => {
                 cmd.arg("-quality").arg("speed");
                 cmd.arg("-rc").arg("cbr");
-            },
-            HardwareEncoder::QsvH264 | HardwareEncoder::QsvH265 | HardwareEncoder::QsvAV1 => {
-                cmd.arg("-preset").arg("medium");
-                cmd.arg("-look_ahead").arg("1");
-            },
-            HardwareEncoder::Vaapi => {
-                cmd.arg("-profile").arg("main");
-                cmd.arg("-level").arg("4.0");
-            },
-            HardwareEncoder::VideoToolbox => {
-                cmd.arg("-profile").arg("main");
-            },
+                },
+                HardwareEncoder::QsvH264 | HardwareEncoder::QsvH265 | HardwareEncoder::QsvAV1 => {
+                    cmd.arg("-preset").arg("medium");
+                    cmd.arg("-look_ahead").arg("1");
+                },
+                HardwareEncoder::Vaapi => {
+                    cmd.arg("-profile").arg("main");
+                    cmd.arg("-level").arg("4.0");
+                },
+                HardwareEncoder::VideoToolbox => {
+                    cmd.arg("-profile").arg("main");
+                },
+            }
         }
         
         // Copy audio to avoid re-encoding

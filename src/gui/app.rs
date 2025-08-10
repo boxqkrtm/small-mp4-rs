@@ -144,6 +144,7 @@ impl SmallMp4App {
                 "enable_hardware_accel" => "하드웨어 가속 활성화".to_string(),
                 "memory_optimization" => "메모리 최적화".to_string(),
                 "advanced_settings" => "고급 설정".to_string(),
+                "compatibility_mode" => "호환성 모드 (x264 only)".to_string(),
                 _ => key.to_string(),
             },
             Language::Japanese => match key {
@@ -168,6 +169,7 @@ impl SmallMp4App {
                 "enable_hardware_accel" => "ハードウェアアクセラレーション有効化".to_string(),
                 "memory_optimization" => "メモリ最適化".to_string(),
                 "advanced_settings" => "詳細設定".to_string(),
+                "compatibility_mode" => "互換性モード (x264のみ)".to_string(),
                 _ => key.to_string(),
             },
             Language::English => match key {
@@ -192,6 +194,7 @@ impl SmallMp4App {
                 "enable_hardware_accel" => "Enable hardware acceleration".to_string(),
                 "memory_optimization" => "Memory optimization".to_string(),
                 "advanced_settings" => "Advanced Settings".to_string(),
+                "compatibility_mode" => "Compatibility mode (x264 only)".to_string(),
                 _ => key.to_string(),
             },
         }
@@ -382,6 +385,23 @@ impl SmallMp4App {
                 }
             }
         });
+        
+        ui.add_space(5.0);
+        
+        // Compatibility mode checkbox (important - show in main UI)
+        let mut compatibility_mode = {
+            if let Ok(state_guard) = self.state.lock() {
+                state_guard.compression_settings.compatibility_mode
+            } else {
+                true // Default to true for maximum compatibility
+            }
+        };
+        
+        ui.checkbox(&mut compatibility_mode, self.get_text("compatibility_mode"));
+        
+        if let Ok(mut state_guard) = self.state.lock() {
+            state_guard.compression_settings.compatibility_mode = compatibility_mode;
+        }
     }
     
     

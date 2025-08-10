@@ -30,6 +30,7 @@ pub struct CompressionSettings {
     pub hardware_quality: HardwareQuality,
     pub force_software_fallback: bool,
     pub memory_optimization: bool,
+    pub compatibility_mode: bool,  // Force x264 for maximum compatibility
 }
 
 impl CompressionSettings {
@@ -71,6 +72,7 @@ impl CompressionSettings {
             hardware_quality: cli_settings.hw_quality.to_hardware_quality(),
             force_software_fallback: cli_settings.force_software,
             memory_optimization: cli_settings.memory_opt,
+            compatibility_mode: cli_settings.compatibility,
         })
     }
     
@@ -91,6 +93,7 @@ impl Default for CompressionSettings {
             hardware_quality: HardwareQuality::Auto,
             force_software_fallback: false,
             memory_optimization: false,
+            compatibility_mode: true,  // Default to true for maximum compatibility
         }
     }
 }
