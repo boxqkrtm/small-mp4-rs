@@ -25,6 +25,9 @@ pub struct AppState {
     
     // Error handling
     pub last_error: Option<String>,
+    
+    // UI popups
+    pub show_completion_popup: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,6 +66,7 @@ impl Default for AppState {
             original_preview: None,
             compressed_preview: None,
             last_error: None,
+            show_completion_popup: false,
         }
     }
 }

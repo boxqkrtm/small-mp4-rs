@@ -85,7 +85,7 @@ impl Default for CompressionSettings {
             target_size: TargetSize::Size10MB,
             estimated_size_mb: None,
             hardware_encoder: HardwareEncoder::Software,
-            enable_hardware_accel: false,
+            enable_hardware_accel: true,
             cuda_device_id: None,
             hardware_preset: HardwarePreset::Medium,
             hardware_quality: HardwareQuality::Auto,

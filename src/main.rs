@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
             info!("Starting compression: {} -> {:?}", input.display(), output);
             info!("Using encoder: {:?}", compression_settings.hardware_encoder);
             
-            engine.compress(input, output.as_ref().map(|p| p.as_path()), &compression_settings).await?;
+            engine.compress(input, output.as_ref().map(|p| p.as_path()), &compression_settings, None).await?;
             
             info!("Compression completed successfully!");
         }

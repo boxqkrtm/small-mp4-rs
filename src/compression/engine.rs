@@ -1,8 +1,10 @@
 use anyhow::{Result, anyhow};
 use log::{info, warn, error, debug};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::io::{BufRead, BufReader};
 use tokio::fs;
+use tokio::sync::mpsc;
 
 use super::hardware::{HardwareCapabilities, HardwareEncoder, fallback::FallbackSystem};
 use super::{CompressionSettings, SizeEstimator};
@@ -31,6 +33,7 @@ impl CompressionEngine {
         input_path: &Path,
         output_path: Option<&Path>,
         settings: &CompressionSettings,
+        progress_tx: Option<mpsc::UnboundedSender<(f32, Option<std::time::Duration>)>>,
     ) -> Result<CompressionResult> {
         info!("Starting video compression");
         info!("Input: {}", input_path.display());
@@ -58,7 +61,7 @@ impl CompressionEngine {
         while attempts < MAX_ATTEMPTS {
             attempts += 1;
             
-            match self.try_compress(input_path, &output_path, &current_settings).await {
+            match self.try_compress(input_path, &output_path, &current_settings, progress_tx.clone()).await {
                 Ok(result) => {
                     // Record success for the encoder
                     self.fallback_system.record_success(&current_settings.hardware_encoder);
@@ -100,6 +103,7 @@ impl CompressionEngine {
         input_path: &Path,
         output_path: &Path,
         settings: &CompressionSettings,
+        progress_tx: Option<mpsc::UnboundedSender<(f32, Option<std::time::Duration>)>>,
     ) -> Result<CompressionResult> {
         let start_time = std::time::Instant::now();
         
@@ -112,10 +116,8 @@ impl CompressionEngine {
         
         // Build ffmpeg command
         let mut cmd = Command::new("ffmpeg");
-        cmd.arg("-i").arg(input_path);
-        cmd.arg("-y"); // Overwrite output file
         
-        // Configure hardware acceleration for input if needed
+        // Configure hardware acceleration for input if needed - MUST come before -i
         if settings.enable_hardware_accel {
             match &settings.hardware_encoder {
                 HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => {
@@ -134,6 +136,9 @@ impl CompressionEngine {
                 _ => {}
             }
         }
+        
+        cmd.arg("-i").arg(input_path);
+        cmd.arg("-y"); // Overwrite output file
         
         // Configure video codec
         let codec = match &settings.hardware_encoder {
@@ -199,14 +204,62 @@ impl CompressionEngine {
             cmd.arg("-threads").arg("1");
         }
         
+        // Add progress reporting
+        cmd.arg("-progress").arg("pipe:2");
+        
         // Output file
         cmd.arg(output_path);
         
         debug!("FFmpeg command: {:?}", cmd);
         
-        // Execute compression
-        let output = cmd.output()
-            .map_err(|e| anyhow!("Failed to execute FFmpeg: {}", e))?;
+        // Execute compression with real-time progress
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+        
+        let mut child = cmd.spawn()
+            .map_err(|e| anyhow!("Failed to spawn FFmpeg: {}", e))?;
+        
+        // Parse progress from stderr if channel provided
+        if let Some(tx) = progress_tx {
+            if let Some(stderr) = child.stderr.take() {
+                let reader = BufReader::new(stderr);
+                let duration_seconds = metadata.duration_seconds;
+                
+                tokio::task::spawn_blocking(move || {
+                    let start_time = std::time::Instant::now();
+                    for line in reader.lines() {
+                        if let Ok(line) = line {
+                            if line.starts_with("out_time_ms=") {
+                                if let Ok(time_ms) = line.split('=').nth(1).unwrap_or("0").parse::<u64>() {
+                                    let current_seconds = time_ms as f64 / 1_000_000.0;
+                                    let progress = (current_seconds / duration_seconds as f64).min(1.0) as f32;
+                                    
+                                    // Calculate ETA
+                                    let elapsed = start_time.elapsed();
+                                    let eta = if progress > 0.01 {
+                                        let total_estimated = elapsed.as_secs_f64() / progress as f64;
+                                        let remaining = total_estimated - elapsed.as_secs_f64();
+                                        if remaining > 0.0 {
+                                            Some(std::time::Duration::from_secs_f64(remaining))
+                                        } else {
+                                            None
+                                        }
+                                    } else {
+                                        None
+                                    };
+                                    
+                                    // Send progress update through channel
+                                    let _ = tx.send((progress, eta));
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        let output = child.wait_with_output()
+            .map_err(|e| anyhow!("Failed to wait for FFmpeg: {}", e))?;
+        
         
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

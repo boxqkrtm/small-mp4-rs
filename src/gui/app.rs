@@ -10,7 +10,7 @@ use super::{GuiConfig, Language};
 
 pub struct SmallMp4App {
     pub config: GuiConfig,
-    pub state: AppState,
+    pub state: Arc<Mutex<AppState>>,
     pub hardware_capabilities: Arc<Mutex<Option<HardwareCapabilities>>>,
     pub compression_engine: Arc<Mutex<Option<CompressionEngine>>>,
     
@@ -32,7 +32,7 @@ impl Default for SmallMp4App {
     fn default() -> Self {
         Self {
             config: GuiConfig::default(),
-            state: AppState::default(),
+            state: Arc::new(Mutex::new(AppState::default())),
             hardware_capabilities: Arc::new(Mutex::new(None)),
             compression_engine: Arc::new(Mutex::new(None)),
             drop_zone: DropZone::default(),
@@ -54,7 +54,16 @@ impl SmallMp4App {
         *app.hardware_capabilities.lock().unwrap() = Some(hw_capabilities.clone());
         
         // Initialize compression engine
-        *app.compression_engine.lock().unwrap() = Some(CompressionEngine::new(hw_capabilities));
+        *app.compression_engine.lock().unwrap() = Some(CompressionEngine::new(hw_capabilities.clone()));
+        
+        // Update compression settings to use available hardware by default
+        if let Ok(mut state_guard) = app.state.lock() {
+            if let Some(preferred_encoder) = &hw_capabilities.preferred_encoder {
+                log::info!("Setting default hardware encoder to: {:?}", preferred_encoder);
+                state_guard.compression_settings.hardware_encoder = preferred_encoder.clone();
+                state_guard.compression_settings.enable_hardware_accel = true;
+            }
+        }
         
         app
     }
@@ -124,6 +133,17 @@ impl SmallMp4App {
                 "cancel" => "취소".to_string(),
                 "original" => "원본".to_string(),
                 "preview" => "미리보기".to_string(),
+                "advanced" => "고급 설정".to_string(),
+                "about" => "정보".to_string(),
+                "language" => "언어".to_string(),
+                "hardware_acceleration" => "하드웨어 가속:".to_string(),
+                "available_encoders" => "사용 가능한 인코더".to_string(),
+                "recommended" => "권장".to_string(),
+                "detecting_hardware" => "🔍 하드웨어 감지 중...".to_string(),
+                "hardware_detection_progress" => "⚙️ 하드웨어 감지 진행 중...".to_string(),
+                "enable_hardware_accel" => "하드웨어 가속 활성화".to_string(),
+                "memory_optimization" => "메모리 최적화".to_string(),
+                "advanced_settings" => "고급 설정".to_string(),
                 _ => key.to_string(),
             },
             Language::Japanese => match key {
@@ -137,6 +157,17 @@ impl SmallMp4App {
                 "cancel" => "キャンセル".to_string(),
                 "original" => "元の動画".to_string(),
                 "preview" => "プレビュー".to_string(),
+                "advanced" => "詳細設定".to_string(),
+                "about" => "について".to_string(),
+                "language" => "言語".to_string(),
+                "hardware_acceleration" => "ハードウェアアクセラレーション:".to_string(),
+                "available_encoders" => "利用可能エンコーダー".to_string(),
+                "recommended" => "推奨".to_string(),
+                "detecting_hardware" => "🔍 ハードウェア検出中...".to_string(),
+                "hardware_detection_progress" => "⚙️ ハードウェア検出進行中...".to_string(),
+                "enable_hardware_accel" => "ハードウェアアクセラレーション有効化".to_string(),
+                "memory_optimization" => "メモリ最適化".to_string(),
+                "advanced_settings" => "詳細設定".to_string(),
                 _ => key.to_string(),
             },
             Language::English => match key {
@@ -150,6 +181,17 @@ impl SmallMp4App {
                 "cancel" => "Cancel".to_string(), 
                 "original" => "Original".to_string(),
                 "preview" => "Preview".to_string(),
+                "advanced" => "Advanced".to_string(),
+                "about" => "About".to_string(),
+                "language" => "Language".to_string(),
+                "hardware_acceleration" => "Hardware Acceleration:".to_string(),
+                "available_encoders" => "Available Encoders".to_string(),
+                "recommended" => "Recommended".to_string(),
+                "detecting_hardware" => "🔍 Detecting hardware...".to_string(),
+                "hardware_detection_progress" => "⚙️ Hardware detection in progress...".to_string(),
+                "enable_hardware_accel" => "Enable hardware acceleration".to_string(),
+                "memory_optimization" => "Memory optimization".to_string(),
+                "advanced_settings" => "Advanced Settings".to_string(),
                 _ => key.to_string(),
             },
         }
@@ -163,7 +205,9 @@ impl eframe::App for SmallMp4App {
             if !i.raw.dropped_files.is_empty() {
                 for file in &i.raw.dropped_files {
                     if let Some(path) = &file.path {
-                        self.state.input_file = Some(path.clone());
+                        if let Ok(mut state_guard) = self.state.lock() {
+                            state_guard.input_file = Some(path.clone());
+                        }
                         log::info!("File dropped: {:?}", path);
                     }
                 }
@@ -185,9 +229,14 @@ impl eframe::App for SmallMp4App {
             self.draw_about_window(ctx);
         }
         
+        // Completion popup
+        self.draw_completion_popup(ctx);
+        
         // Request repaint for smooth animations
-        if self.state.status != CompressionStatus::Idle {
-            ctx.request_repaint();
+        if let Ok(state_guard) = self.state.lock() {
+            if state_guard.status != CompressionStatus::Idle {
+                ctx.request_repaint();
+            }
         }
     }
 }
@@ -230,10 +279,16 @@ impl SmallMp4App {
             ui.label("Input:");
             ui.horizontal(|ui| {
                 // File path display
-                let file_text = self.state.input_file
-                    .as_ref()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_else(|| self.get_text("drag_drop").to_string());
+                let file_text = {
+                    if let Ok(state_guard) = self.state.lock() {
+                        state_guard.input_file
+                            .as_ref()
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or_else(|| self.get_text("drag_drop").to_string())
+                    } else {
+                        self.get_text("drag_drop").to_string()
+                    }
+                };
                     
                 ui.add_sized([350.0, 25.0], egui::TextEdit::singleline(&mut file_text.as_str())
                     .interactive(false));
@@ -244,7 +299,9 @@ impl SmallMp4App {
                         .add_filter("Video files", &["mp4", "avi", "mov", "mkv", "flv", "wmv"])
                         .pick_file() 
                     {
-                        self.state.set_input_file(path);
+                        if let Ok(mut state_guard) = self.state.lock() {
+                            state_guard.set_input_file(path);
+                        }
                     }
                 }
             });
@@ -254,13 +311,28 @@ impl SmallMp4App {
             // Output options
             ui.label("Output:");
             ui.horizontal(|ui| {
-                ui.checkbox(&mut self.state.same_folder, "Same folder");
+                let (same_folder, output_folder) = {
+                    if let Ok(state_guard) = self.state.lock() {
+                        (state_guard.same_folder, state_guard.output_folder.clone())
+                    } else {
+                        (true, None)
+                    }
+                };
+                
+                let mut same_folder_checkbox = same_folder;
+                ui.checkbox(&mut same_folder_checkbox, "Same folder");
+                
+                if same_folder_checkbox != same_folder {
+                    if let Ok(mut state_guard) = self.state.lock() {
+                        state_guard.same_folder = same_folder_checkbox;
+                    }
+                }
                 
                 // Show output folder selection when not using same folder
-                if !self.state.same_folder {
+                if !same_folder_checkbox {
                     ui.separator();
                     
-                    let folder_text = self.state.output_folder
+                    let folder_text = output_folder
                         .as_ref()
                         .map(|p| p.to_string_lossy().to_string())
                         .unwrap_or_else(|| "Select output folder...".to_string());
@@ -270,7 +342,9 @@ impl SmallMp4App {
                     
                     if ui.button("📁 Choose").clicked() {
                         if let Some(folder) = rfd::FileDialog::new().pick_folder() {
-                            self.state.output_folder = Some(folder);
+                            if let Ok(mut state_guard) = self.state.lock() {
+                                state_guard.output_folder = Some(folder);
+                            }
                         }
                     }
                 }
@@ -291,10 +365,20 @@ impl SmallMp4App {
                 (TargetSize::Size50MB, "50 MB"),
             ];
             
+            let current_target_size = {
+                if let Ok(state_guard) = self.state.lock() {
+                    state_guard.compression_settings.target_size.clone()
+                } else {
+                    TargetSize::Size10MB
+                }
+            };
+            
             for (size, label) in sizes {
-                let selected = self.state.compression_settings.target_size == size;
+                let selected = current_target_size == size;
                 if ui.selectable_label(selected, label).clicked() {
-                    self.state.compression_settings.target_size = size;
+                    if let Ok(mut state_guard) = self.state.lock() {
+                        state_guard.compression_settings.target_size = size;
+                    }
                 }
             }
         });
@@ -302,19 +386,44 @@ impl SmallMp4App {
     
     
     fn draw_controls_section(&mut self, ui: &mut egui::Ui) {
+        let (status, progress, has_input_file, eta) = {
+            if let Ok(state_guard) = self.state.lock() {
+                (
+                    state_guard.status.clone(), 
+                    state_guard.progress, 
+                    state_guard.input_file.is_some(),
+                    state_guard.estimated_time.clone()
+                )
+            } else {
+                (CompressionStatus::Idle, 0.0, false, None)
+            }
+        };
+        
         // Progress bar
-        if self.state.status != CompressionStatus::Idle {
-            ui.add(egui::ProgressBar::new(self.state.progress)
-                .text(format!("{}%", (self.state.progress * 100.0) as u32)));
+        if status != CompressionStatus::Idle {
+            let progress_text = if let Some(time_left) = eta {
+                let seconds = time_left.as_secs();
+                let mins = seconds / 60;
+                let secs = seconds % 60;
+                if mins > 0 {
+                    format!("{}% ({}:{:02} 남음)", (progress * 100.0) as u32, mins, secs)
+                } else {
+                    format!("{}% ({}초 남음)", (progress * 100.0) as u32, secs)
+                }
+            } else {
+                format!("{}%", (progress * 100.0) as u32)
+            };
+            
+            ui.add(egui::ProgressBar::new(progress).text(progress_text));
         }
         
         ui.add_space(5.0);
         
         // Control buttons
         ui.horizontal_centered(|ui| {
-            match self.state.status {
+            match status {
                 CompressionStatus::Idle => {
-                    let compress_enabled = self.state.input_file.is_some();
+                    let compress_enabled = has_input_file;
                     if ui.add_enabled(compress_enabled, 
                         egui::Button::new(format!("🎬 {}", self.get_text("compress")))
                     ).clicked() {
@@ -339,16 +448,16 @@ impl SmallMp4App {
     
     fn draw_menu_bar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            if ui.small_button("Advanced").clicked() {
+            if ui.small_button(self.get_text("advanced")).clicked() {
                 self.show_advanced = !self.show_advanced;
             }
             
-            if ui.small_button("About").clicked() {
+            if ui.small_button(self.get_text("about")).clicked() {
                 self.show_about = !self.show_about;
             }
             
             // Language selector
-            egui::ComboBox::from_label("Language")
+            egui::ComboBox::from_label(self.get_text("language"))
                 .selected_text(match self.config.language {
                     Language::English => "English",
                     Language::Korean => "한국어", 
@@ -363,45 +472,85 @@ impl SmallMp4App {
     }
     
     fn draw_advanced_window(&mut self, ctx: &egui::Context) {
-        egui::Window::new("Advanced Settings")
+        // Pre-collect all text to avoid borrow issues
+        let window_title = self.get_text("advanced_settings");
+        let hw_accel_text = self.get_text("hardware_acceleration");
+        let available_encoders_text = self.get_text("available_encoders");
+        let recommended_text = self.get_text("recommended");
+        let detecting_hw_text = self.get_text("detecting_hardware");
+        let detection_progress_text = self.get_text("hardware_detection_progress");
+        let enable_hw_accel_text = self.get_text("enable_hardware_accel");
+        let memory_opt_text = self.get_text("memory_optimization");
+        
+        egui::Window::new(window_title)
             .open(&mut self.show_advanced)
             .show(ctx, |ui| {
-                ui.label("Hardware Acceleration:");
+                ui.label(hw_accel_text);
                 
                 // Show detected hardware
                 if let Ok(hw_caps) = self.hardware_capabilities.try_lock() {
                     if let Some(ref caps) = *hw_caps {
-                        ui.label(format!("Available encoders: {}", caps.available_encoders.len()));
+                        ui.label(format!("{}: {}", available_encoders_text, caps.available_encoders.len()));
                         if let Some(ref preferred) = caps.preferred_encoder {
-                            ui.label(format!("Recommended: {:?}", preferred));
+                            ui.label(format!("{}: {:?}", recommended_text, preferred));
                         }
                     } else {
-                        ui.label("🔍 Detecting hardware...");
+                        ui.label(detecting_hw_text);
                     }
                 } else {
-                    ui.label("⚙️ Hardware detection in progress...");
+                    ui.label(detection_progress_text);
                 }
                 
                 ui.separator();
                 
-                ui.checkbox(&mut self.state.compression_settings.enable_hardware_accel, 
-                    "Enable hardware acceleration");
-                ui.checkbox(&mut self.state.compression_settings.memory_optimization, 
-                    "Memory optimization");
+                let (mut enable_hw_accel, mut memory_opt) = {
+                    if let Ok(state_guard) = self.state.lock() {
+                        (state_guard.compression_settings.enable_hardware_accel,
+                         state_guard.compression_settings.memory_optimization)
+                    } else {
+                        (true, false)
+                    }
+                };
+                
+                ui.checkbox(&mut enable_hw_accel, &enable_hw_accel_text);
+                ui.checkbox(&mut memory_opt, &memory_opt_text);
+                
+                // Update state if changed
+                if let Ok(mut state_guard) = self.state.lock() {
+                    state_guard.compression_settings.enable_hardware_accel = enable_hw_accel;
+                    state_guard.compression_settings.memory_optimization = memory_opt;
+                }
             });
     }
     
     fn draw_about_window(&mut self, ctx: &egui::Context) {
-        egui::Window::new("About")
+        let about_title = self.get_text("about");
+        egui::Window::new(about_title)
             .open(&mut self.show_about)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.heading("Small MP4");
                     ui.label("Version 0.2.0");
                     ui.add_space(10.0);
-                    ui.label("Squeeze your videos for easy sharing");
-                    ui.label("동영상 공유를 위해서 영상을 꾸겨줍니다");
-                    ui.label("動画共有のために映像を圧縮します");
+                    
+                    // Show description in selected language only
+                    ui.group(|ui| {
+                        ui.vertical(|ui| {
+                            let (flag, description) = match self.config.language {
+                                Language::Korean => ("🇰🇷", "동영상 공유를 위해서 영상을 꾸겨줍니다"),
+                                Language::Japanese => ("🇯🇵", "動画共有のために映像を圧縮します"),
+                                Language::English => ("🇺🇸", "Squeeze your videos for easy sharing"),
+                            };
+                            
+                            ui.label(format!("{} {}", flag, match self.config.language {
+                                Language::Korean => "한국어",
+                                Language::Japanese => "日本語", 
+                                Language::English => "English",
+                            }));
+                            ui.label(description);
+                        });
+                    });
+                    
                     ui.add_space(10.0);
                     ui.hyperlink_to("GitHub", "https://github.com/small-mp4/small-mp4-rs");
                 });
@@ -409,21 +558,176 @@ impl SmallMp4App {
     }
     
     fn start_compression(&mut self) {
-        self.state.status = CompressionStatus::Processing;
-        self.state.progress = 0.0;
+        // Validate input file exists
+        let (input_file, output_path) = {
+            let mut state_guard = self.state.lock().unwrap();
+            let input_file = match &state_guard.input_file {
+                Some(file) => file.clone(),
+                None => {
+                    state_guard.set_error("No input file selected".to_string());
+                    return;
+                }
+            };
+            
+            // Get output path
+            let output_path = match state_guard.get_output_path() {
+                Some(path) => path,
+                None => {
+                    state_guard.set_error("Could not determine output path".to_string());
+                    return;
+                }
+            };
+            
+            (input_file, output_path)
+        };
         
-        // TODO: Start actual compression in background
+        {
+            let mut state_guard = self.state.lock().unwrap();
+            state_guard.status = CompressionStatus::Processing;
+            state_guard.progress = 0.0;
+        }
         log::info!("Starting compression...");
+        log::info!("Input: {}", input_file.display());
+        log::info!("Output: {}", output_path.display());
+        
+        // Clone what we need for the async task
+        let settings = {
+            let state_guard = self.state.lock().unwrap();
+            state_guard.compression_settings.clone()
+        };
+        
+        // Get compression engine and state (clone the Arc to move into async context)
+        let engine = self.compression_engine.clone();
+        let app_state = self.state.clone();
+        
+        // Spawn compression task in a separate thread using std::thread
+        std::thread::spawn(move || {
+            // Use a blocking runtime for this thread
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+            rt.block_on(async move {
+                // Try to get a lock on the engine
+                let result = {
+                    let mut engine_guard = match engine.lock() {
+                        Ok(guard) => guard,
+                        Err(_) => {
+                            log::error!("Could not lock compression engine (poisoned)");
+                            return;
+                        }
+                    };
+                    
+                    if let Some(ref mut compression_engine) = *engine_guard {
+                        // Create progress channel
+                        let (progress_tx, mut progress_rx) = tokio::sync::mpsc::unbounded_channel();
+                        
+                        // Spawn task to receive progress updates
+                        let app_state_progress = app_state.clone();
+                        tokio::task::spawn(async move {
+                            while let Some((progress, eta)) = progress_rx.recv().await {
+                                if let Ok(mut state_guard) = app_state_progress.lock() {
+                                    state_guard.progress = progress;
+                                    state_guard.estimated_time = eta;
+                                }
+                            }
+                        });
+                        
+                        compression_engine.compress(&input_file, Some(&output_path), &settings, Some(progress_tx)).await
+                    } else {
+                        log::error!("Compression engine not initialized");
+                        return;
+                    }
+                };
+                
+                match result {
+                    Ok(result) => {
+                        log::info!("Compression completed successfully!");
+                        log::info!("Input size: {:.1} MB, Output size: {:.1} MB", 
+                            result.input_size_mb, result.output_size_mb);
+                        
+                        // Update GUI state to idle and show completion
+                        if let Ok(mut state_guard) = app_state.lock() {
+                            state_guard.status = CompressionStatus::Idle;
+                            state_guard.progress = 1.0; // 100% complete
+                            state_guard.show_completion_popup = true; // Show completion popup
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("Compression failed: {}", e);
+                        
+                        // Update GUI state to idle with error
+                        if let Ok(mut state_guard) = app_state.lock() {
+                            state_guard.status = CompressionStatus::Idle;
+                            state_guard.progress = 0.0;
+                            state_guard.set_error(format!("Compression failed: {}", e));
+                        }
+                    }
+                }
+            });
+        });
     }
     
     fn stop_compression(&mut self) {
-        self.state.status = CompressionStatus::Paused;
+        if let Ok(mut state_guard) = self.state.lock() {
+            state_guard.status = CompressionStatus::Paused;
+        }
         log::info!("Compression stopped");
     }
     
     fn cancel_compression(&mut self) {
-        self.state.status = CompressionStatus::Idle;
-        self.state.progress = 0.0;
+        if let Ok(mut state_guard) = self.state.lock() {
+            state_guard.status = CompressionStatus::Idle;
+            state_guard.progress = 0.0;
+        }
         log::info!("Compression cancelled");
+    }
+    
+    fn draw_completion_popup(&mut self, ctx: &egui::Context) {
+        let show_popup = {
+            if let Ok(state_guard) = self.state.lock() {
+                state_guard.show_completion_popup
+            } else {
+                false
+            }
+        };
+        
+        if show_popup {
+            let (title, message, button_text) = match self.config.language {
+                Language::Korean => (
+                    "압축 완료!",
+                    "✅ 비디오 압축이 완료되었습니다!",
+                    "확인"
+                ),
+                Language::Japanese => (
+                    "圧縮完了！",
+                    "✅ ビデオ圧縮が完了しました！",
+                    "OK"
+                ),
+                Language::English => (
+                    "Compression Complete!",
+                    "✅ Video compression completed successfully!",
+                    "OK"
+                ),
+            };
+            
+            egui::Window::new(title)
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(10.0);
+                        ui.label(message);
+                        ui.add_space(10.0);
+                        
+                        ui.horizontal(|ui| {
+                            if ui.button(button_text).clicked() {
+                                if let Ok(mut state_guard) = self.state.lock() {
+                                    state_guard.show_completion_popup = false;
+                                }
+                            }
+                        });
+                        ui.add_space(5.0);
+                    });
+                });
+        }
     }
 }
