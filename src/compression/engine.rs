@@ -465,6 +465,11 @@ impl CompressionEngine {
         cmd.arg("-c:v").arg(codec);
         info!("Using codec: {}", codec);
         
+        // Convert VFR to CFR for better compression predictability
+        // This helps 2-pass encoding be more accurate
+        cmd.arg("-vsync").arg("cfr");
+        cmd.arg("-r").arg(format!("{}", metadata.fps));
+        
         // Set bitrate parameters
         cmd.arg("-b:v").arg(format!("{}k", target_bitrate));
         cmd.arg("-maxrate").arg(format!("{}k", target_bitrate));
