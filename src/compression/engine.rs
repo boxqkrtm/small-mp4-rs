@@ -132,124 +132,19 @@ impl CompressionEngine {
             return self.two_pass_encode(input_path, output_path, settings, target_bitrate, &metadata, progress_tx).await;
         }
         
-        // Build ffmpeg command
-        let mut cmd = Command::new("ffmpeg");
-        
-        // Configure hardware acceleration for input if needed - MUST come before -i
-        if settings.enable_hardware_accel {
-            match &settings.hardware_encoder {
-                HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => {
-                    cmd.arg("-hwaccel").arg("cuda");
-                    if let Some(device_id) = settings.cuda_device_id {
-                        cmd.arg("-hwaccel_device").arg(device_id.to_string());
-                    }
-                },
-                HardwareEncoder::Vaapi => {
-                    cmd.arg("-hwaccel").arg("vaapi");
-                    cmd.arg("-hwaccel_device").arg("/dev/dri/renderD128");
-                },
-                HardwareEncoder::VideoToolbox => {
-                    cmd.arg("-hwaccel").arg("videotoolbox");
-                },
-                _ => {}
-            }
-        }
-        
-        cmd.arg("-i").arg(input_path);
-        cmd.arg("-y"); // Overwrite output file
-        
-        // Configure video codec
-        let codec = if settings.compatibility_mode {
-            // Force H.264 for maximum compatibility
-            match &settings.hardware_encoder {
-                // Use hardware H.264 encoders if available
-                HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => "h264_nvenc",
-                HardwareEncoder::AmfH264 | HardwareEncoder::AmfH265 => "h264_amf",
-                HardwareEncoder::QsvH264 | HardwareEncoder::QsvH265 | HardwareEncoder::QsvAV1 => "h264_qsv",
-                HardwareEncoder::Vaapi => "h264_vaapi",
-                HardwareEncoder::VideoToolbox => "h264_videotoolbox",
-                HardwareEncoder::Software => "libx264",
-            }
-        } else {
-            match &settings.hardware_encoder {
-                HardwareEncoder::NvencH264 => "h264_nvenc",
-                HardwareEncoder::NvencH265 => "hevc_nvenc",
-                HardwareEncoder::NvencAV1 => "av1_nvenc",
-                HardwareEncoder::AmfH264 => "h264_amf",
-                HardwareEncoder::AmfH265 => "hevc_amf",
-                HardwareEncoder::QsvH264 => "h264_qsv",
-                HardwareEncoder::QsvH265 => "hevc_qsv",
-                HardwareEncoder::QsvAV1 => "av1_qsv",
-                HardwareEncoder::Vaapi => "h264_vaapi",
-                HardwareEncoder::VideoToolbox => "h264_videotoolbox",
-                HardwareEncoder::Software => "libx264",
-            }
-        };
-        
-        cmd.arg("-c:v").arg(codec);
-        
-        info!("Using codec: {}", codec);
-        
-        // Set bitrate parameters
-        cmd.arg("-b:v").arg(format!("{}k", target_bitrate));
-        cmd.arg("-maxrate").arg(format!("{}k", target_bitrate));
-        cmd.arg("-bufsize").arg(format!("{}k", target_bitrate * 2));
-        
-        // Set preset based on hardware
-        match &settings.hardware_encoder {
-            HardwareEncoder::Software => {
-                let preset = settings.hardware_preset.software_preset();
-                cmd.arg("-preset").arg(preset);
-            },
-            HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => {
-                let preset = settings.hardware_preset.nvenc_preset();
-                cmd.arg("-preset").arg(preset);
-                // Use VBR with multipass for better quality and size control
-                cmd.arg("-rc").arg("vbr");
-                cmd.arg("-multipass").arg("fullres");
-                cmd.arg("-cq").arg("0"); // Let bitrate control quality
-            },
-            HardwareEncoder::AmfH264 | HardwareEncoder::AmfH265 => {
-                cmd.arg("-quality").arg("speed");
-                cmd.arg("-rc").arg("cbr");
-            },
-            HardwareEncoder::QsvH264 | HardwareEncoder::QsvH265 | HardwareEncoder::QsvAV1 => {
-                cmd.arg("-preset").arg("medium");
-                cmd.arg("-look_ahead").arg("1");
-            },
-            HardwareEncoder::Vaapi => {
-                cmd.arg("-profile").arg("main");
-                cmd.arg("-level").arg("4.0");
-            },
-            HardwareEncoder::VideoToolbox => {
-                cmd.arg("-profile").arg("main");
-            },
-        }
-        
-        // Copy audio to avoid re-encoding
-        cmd.arg("-c:a").arg("copy");
-        
-        // Output format settings
-        cmd.arg("-movflags").arg("+faststart");
-        cmd.arg("-pix_fmt").arg("yuv420p");
-        
-        // Memory optimization
-        if settings.memory_optimization {
-            cmd.arg("-threads").arg("1");
-        }
+        // Build ffmpeg command using the shared function
+        let mut cmd = self.build_ffmpeg_command(input_path, output_path, settings, target_bitrate, &metadata);
         
         // Add progress reporting
         cmd.arg("-progress").arg("pipe:2");
         
-        // Output file
-        cmd.arg(output_path);
-        
         debug!("FFmpeg command: {:?}", cmd);
         
         // Execute compression with real-time progress
-        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
-        
-        let mut child = cmd.spawn()
+        let mut child = cmd
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
             .map_err(|e| anyhow!("Failed to spawn FFmpeg: {}", e))?;
         
         // Parse progress from stderr if channel provided
@@ -365,7 +260,7 @@ impl CompressionEngine {
         
         // Second pass
         info!("Starting second pass encoding...");
-        let mut cmd = self.build_ffmpeg_command(input_path, output_path, settings, target_bitrate);
+        let mut cmd = self.build_ffmpeg_command(input_path, output_path, settings, target_bitrate, metadata);
         
         // Add 2-pass specific arguments
         cmd.arg("-pass").arg("2");
@@ -451,7 +346,8 @@ impl CompressionEngine {
         log_file: &str,
         progress_tx: Option<mpsc::UnboundedSender<(f32, Option<std::time::Duration>)>>,
     ) -> Result<bool> {
-        let mut cmd = self.build_ffmpeg_command(input_path, &PathBuf::from("/dev/null"), settings, target_bitrate);
+        let metadata = get_video_metadata(input_path).await?;
+        let mut cmd = self.build_ffmpeg_command(input_path, &PathBuf::from("/dev/null"), settings, target_bitrate, &metadata);
         
         // Add pass-specific arguments
         cmd.arg("-pass").arg(pass_num.to_string());
@@ -513,6 +409,7 @@ impl CompressionEngine {
         output_path: &Path,
         settings: &CompressionSettings,
         target_bitrate: u32,
+        metadata: &super::estimator::VideoMetadata,
     ) -> Command {
         let mut cmd = Command::new("ffmpeg");
         
@@ -604,8 +501,27 @@ impl CompressionEngine {
             },
         }
         
-        // Copy audio to avoid re-encoding
-        cmd.arg("-c:a").arg("copy");
+        // Configure audio encoding based on duration
+        let audio_bitrate = if metadata.duration_seconds > 600.0 {
+            "96k"  // 96 kbps for videos > 10 minutes
+        } else if metadata.duration_seconds > 300.0 {
+            "112k"  // 112 kbps for videos > 5 minutes
+        } else {
+            "128k"  // 128 kbps for shorter videos
+        };
+        
+        cmd.arg("-c:a").arg("aac");
+        cmd.arg("-b:a").arg(audio_bitrate);
+        cmd.arg("-ac").arg("2"); // Stereo
+        
+        // Output format settings
+        cmd.arg("-movflags").arg("+faststart");
+        cmd.arg("-pix_fmt").arg("yuv420p");
+        
+        // Memory optimization
+        if settings.memory_optimization {
+            cmd.arg("-threads").arg("1");
+        }
         
         // Add output path
         cmd.arg(output_path);
@@ -620,11 +536,19 @@ impl CompressionEngine {
         // Calculate total available bits
         let total_bits = target_mb * 8.0 * 1024.0 * 1024.0;
         
-        // Reserve some space for audio (assume 128 kbps audio)
-        let audio_bits = 128.0 * 1024.0 * duration_seconds;
+        // Dynamic audio bitrate calculation
+        // Use lower audio bitrate for longer videos to save space
+        let audio_bitrate = if duration_seconds > 600.0 {
+            96.0  // 96 kbps for videos > 10 minutes
+        } else if duration_seconds > 300.0 {
+            112.0  // 112 kbps for videos > 5 minutes
+        } else {
+            128.0  // 128 kbps for shorter videos
+        };
+        let audio_bits = audio_bitrate * 1024.0 * duration_seconds;
         
-        // Reserve 2% for container overhead
-        let container_overhead = total_bits * 0.02;
+        // Reserve 1% for container overhead (reduced from 2%)
+        let container_overhead = total_bits * 0.01;
         
         // Calculate available bits for video
         let available_video_bits = total_bits - audio_bits - container_overhead;
@@ -633,14 +557,22 @@ impl CompressionEngine {
         let video_bitrate_bps = available_video_bits / duration_seconds;
         let video_bitrate_kbps = video_bitrate_bps / 1024.0;
         
-        // Apply safety margin of 0.95 to ensure we never exceed target
-        let safe_bitrate = (video_bitrate_kbps * 0.95) as u32;
+        // Apply smaller safety margin of 0.98 for better size utilization
+        let safe_bitrate = (video_bitrate_kbps * 0.98) as u32;
         
-        // Ensure minimum bitrate of 100 kbps
-        let final_bitrate = safe_bitrate.max(100);
+        // Calculate minimum bitrate based on resolution for quality
+        let min_bitrate = if metadata.width >= 1920 {
+            300  // 1080p+ needs at least 300 kbps
+        } else if metadata.width >= 1280 {
+            200  // 720p needs at least 200 kbps
+        } else {
+            150  // Lower resolutions
+        };
         
-        debug!("Bitrate calculation: target={:.1}MB, duration={:.1}s, bitrate={}kbps", 
-               target_mb, duration_seconds, final_bitrate);
+        let final_bitrate = safe_bitrate.max(min_bitrate);
+        
+        info!("Bitrate calculation: target={:.1}MB, duration={:.1}s, audio={}kbps, video={}kbps", 
+              target_mb, duration_seconds, audio_bitrate, final_bitrate);
         
         final_bitrate
     }
