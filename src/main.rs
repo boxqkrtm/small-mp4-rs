@@ -94,7 +94,10 @@ async fn launch_gui(hw_capabilities: HardwareCapabilities) -> Result<()> {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([500.0, 600.0])
             .with_min_inner_size([400.0, 550.0])
-            .with_icon(eframe::icon_data::from_png_bytes(&[]).unwrap_or_default()),
+            .with_icon(
+                eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png"))
+                    .expect("Failed to load icon"),
+            ),
         ..Default::default()
     };
 
