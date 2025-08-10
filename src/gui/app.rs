@@ -246,7 +246,8 @@ impl eframe::App for SmallMp4App {
 
 impl SmallMp4App {
     fn draw_main_ui(&mut self, ui: &mut egui::Ui) {
-        ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
+        // Main content area first
+        ui.vertical(|ui| {
             // Title
             ui.add_space(5.0);
             ui.heading(self.get_text("title"));
@@ -269,10 +270,13 @@ impl SmallMp4App {
             // Progress and controls
             self.draw_controls_section(ui);
             
+            // Add flexible space
+            ui.add_space(ui.available_height() - 50.0);
+            
             // Menu bar at bottom
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                self.draw_menu_bar(ui);
-            });
+            ui.separator();
+            self.draw_menu_bar(ui);
+            ui.add_space(5.0);
         });
     }
     
@@ -358,9 +362,10 @@ impl SmallMp4App {
     fn draw_size_section(&mut self, ui: &mut egui::Ui) {
         ui.label(self.get_text("target_size"));
         
+        // Size buttons in two rows
         ui.horizontal(|ui| {
-            // Size buttons (1, 5, 10, 30, 50 MB)
-            let sizes = [
+            // First row: 1, 5, 10, 30, 50 MB
+            let sizes_row1 = [
                 (TargetSize::Size1MB, "1 MB"),
                 (TargetSize::Size5MB, "5 MB"), 
                 (TargetSize::Size10MB, "10 MB"),
@@ -376,7 +381,34 @@ impl SmallMp4App {
                 }
             };
             
-            for (size, label) in sizes {
+            for (size, label) in sizes_row1 {
+                let selected = current_target_size == size;
+                if ui.selectable_label(selected, label).clicked() {
+                    if let Ok(mut state_guard) = self.state.lock() {
+                        state_guard.compression_settings.target_size = size;
+                    }
+                }
+            }
+        });
+        
+        ui.horizontal(|ui| {
+            // Second row: 100, 250, 500, 1000 MB
+            let sizes_row2 = [
+                (TargetSize::Size100MB, "100 MB"),
+                (TargetSize::Size250MB, "250 MB"), 
+                (TargetSize::Size500MB, "500 MB"),
+                (TargetSize::Size1000MB, "1 GB"),
+            ];
+            
+            let current_target_size = {
+                if let Ok(state_guard) = self.state.lock() {
+                    state_guard.compression_settings.target_size.clone()
+                } else {
+                    TargetSize::Size10MB
+                }
+            };
+            
+            for (size, label) in sizes_row2 {
                 let selected = current_target_size == size;
                 if ui.selectable_label(selected, label).clicked() {
                     if let Ok(mut state_guard) = self.state.lock() {
@@ -419,9 +451,9 @@ impl SmallMp4App {
             }
         };
         
-        // Progress bar
-        if status != CompressionStatus::Idle {
-            let progress_text = if let Some(time_left) = eta {
+        // Progress bar - always visible
+        let progress_text = if status != CompressionStatus::Idle {
+            if let Some(time_left) = eta {
                 let seconds = time_left.as_secs();
                 let mins = seconds / 60;
                 let secs = seconds % 60;
@@ -432,25 +464,28 @@ impl SmallMp4App {
                 }
             } else {
                 format!("{}%", (progress * 100.0) as u32)
-            };
-            
-            ui.add(egui::ProgressBar::new(progress).text(progress_text));
-        }
+            }
+        } else {
+            "0%".to_string()
+        };
+        
+        ui.add(egui::ProgressBar::new(progress).text(progress_text));
         
         ui.add_space(5.0);
         
-        // Control buttons
-        ui.horizontal_centered(|ui| {
-            match status {
-                CompressionStatus::Idle => {
-                    let compress_enabled = has_input_file;
-                    if ui.add_enabled(compress_enabled, 
-                        egui::Button::new(format!("🎬 {}", self.get_text("compress")))
-                    ).clicked() {
-                        self.start_compression();
-                    }
-                },
-                CompressionStatus::Processing => {
+        // Control buttons - not horizontally centered anymore
+        match status {
+            CompressionStatus::Idle => {
+                let compress_enabled = has_input_file;
+                if ui.add_enabled(compress_enabled, 
+                    egui::Button::new(format!("🎬 {}", self.get_text("compress")))
+                        .min_size(egui::vec2(200.0, 35.0))
+                ).clicked() {
+                    self.start_compression();
+                }
+            },
+            CompressionStatus::Processing => {
+                ui.horizontal(|ui| {
                     if ui.button(format!("⏹️ {}", self.get_text("stop"))).clicked() {
                         self.stop_compression();
                     }
@@ -460,10 +495,10 @@ impl SmallMp4App {
                     if ui.button(format!("❌ {}", self.get_text("cancel"))).clicked() {
                         self.cancel_compression();
                     }
-                },
-                _ => {}
-            }
-        });
+                });
+            },
+            _ => {}
+        }
     }
     
     fn draw_menu_bar(&mut self, ui: &mut egui::Ui) {

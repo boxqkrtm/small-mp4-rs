@@ -88,6 +88,14 @@ pub enum SizePreset {
     Size30MB,
     #[value(name = "50mb")]
     Size50MB,
+    #[value(name = "100mb")]
+    Size100MB,
+    #[value(name = "250mb")]
+    Size250MB,
+    #[value(name = "500mb")]
+    Size500MB,
+    #[value(name = "1gb")]
+    Size1GB,
 }
 
 impl SizePreset {
@@ -98,6 +106,10 @@ impl SizePreset {
             SizePreset::Size10MB => 10.0,
             SizePreset::Size30MB => 30.0,
             SizePreset::Size50MB => 50.0,
+            SizePreset::Size100MB => 100.0,
+            SizePreset::Size250MB => 250.0,
+            SizePreset::Size500MB => 500.0,
+            SizePreset::Size1GB => 1000.0,
         }
     }
 }

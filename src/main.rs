@@ -92,8 +92,8 @@ async fn launch_gui(hw_capabilities: HardwareCapabilities) -> Result<()> {
     
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
-            .with_inner_size([500.0, 320.0])
-            .with_min_inner_size([400.0, 280.0])
+            .with_inner_size([500.0, 600.0])
+            .with_min_inner_size([400.0, 550.0])
             .with_icon(eframe::icon_data::from_png_bytes(&[]).unwrap_or_default()),
         ..Default::default()
     };
