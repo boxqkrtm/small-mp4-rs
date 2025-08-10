@@ -561,15 +561,27 @@ impl CompressionEngine {
         let safe_bitrate = (video_bitrate_kbps * 0.98) as u32;
         
         // Calculate minimum bitrate based on resolution for quality
-        let min_bitrate = if metadata.width >= 1920 {
-            300  // 1080p+ needs at least 300 kbps
+        // But only apply if it doesn't exceed our target
+        let recommended_min_bitrate = if metadata.width >= 1920 {
+            300  // 1080p+ ideally needs at least 300 kbps
         } else if metadata.width >= 1280 {
-            200  // 720p needs at least 200 kbps
+            200  // 720p ideally needs at least 200 kbps
         } else {
             150  // Lower resolutions
         };
         
-        let final_bitrate = safe_bitrate.max(min_bitrate);
+        // Only use minimum if it doesn't cause us to exceed target size
+        let final_bitrate = if safe_bitrate >= recommended_min_bitrate {
+            safe_bitrate  // We have enough bitrate budget
+        } else {
+            // Warn user that quality might be poor
+            warn!("Target bitrate {}kbps is below recommended {}kbps for {}p video. Quality may be poor.", 
+                  safe_bitrate, recommended_min_bitrate, metadata.height);
+            safe_bitrate  // Still respect the target size
+        };
+        
+        // Absolute minimum to prevent unusable video
+        let final_bitrate = final_bitrate.max(50);
         
         info!("Bitrate calculation: target={:.1}MB, duration={:.1}s, audio={}kbps, video={}kbps", 
               target_mb, duration_seconds, audio_bitrate, final_bitrate);
