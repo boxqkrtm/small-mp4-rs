@@ -68,7 +68,7 @@ Lightweight GUI using Rust native egui with fast startup and low memory usage.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/small-mp4-rs.git
+git clone https://github.com/boxqkrtm/small-mp4-rs.git
 cd small-mp4-rs
 
 # Run the native GUI directly
@@ -90,7 +90,7 @@ Powerful CLI tool for automation and batch processing.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/small-mp4-rs.git
+git clone https://github.com/boxqkrtm/small-mp4-rs.git
 cd small-mp4-rs
 
 # Build CLI tool

@@ -70,7 +70,7 @@ Rust native egui를 사용한 경량 GUI로, 빠른 실행과 낮은 메모리 �
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-username/small-mp4-rs.git
+git clone https://github.com/boxqkrtm/small-mp4-rs.git
 cd small-mp4-rs
 
 # 네이티브 GUI 직접 실행
@@ -92,7 +92,7 @@ cargo build --release
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-username/small-mp4-rs.git
+git clone https://github.com/boxqkrtm/small-mp4-rs.git
 cd small-mp4-rs
 
 # CLI 도구 빌드

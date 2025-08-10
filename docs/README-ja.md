@@ -70,7 +70,7 @@ Rustネイティブeguiを使用した軽量GUIで、高速起動と低メモリ
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/your-username/small-mp4-rs.git
+git clone https://github.com/boxqkrtm/small-mp4-rs.git
 cd small-mp4-rs
 
 # ネイティブGUIを直接実行
@@ -92,7 +92,7 @@ cargo build --release
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/your-username/small-mp4-rs.git
+git clone https://github.com/boxqkrtm/small-mp4-rs.git
 cd small-mp4-rs
 
 # CLIツールをビルド
