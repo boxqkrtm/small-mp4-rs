@@ -32,6 +32,7 @@ pub struct CompressionSettings {
     pub force_software_fallback: bool,
     pub memory_optimization: bool,
     pub compatibility_mode: bool,  // Force x264 for maximum compatibility
+    pub remove_audio: bool,  // Remove audio track from output
 }
 
 impl CompressionSettings {
@@ -74,6 +75,7 @@ impl CompressionSettings {
             force_software_fallback: cli_settings.force_software,
             memory_optimization: cli_settings.memory_opt,
             compatibility_mode: cli_settings.compatibility,
+            remove_audio: false,  // Default to keeping audio in CLI
         })
     }
     
@@ -96,6 +98,7 @@ impl Default for CompressionSettings {
             force_software_fallback: false,
             memory_optimization: false,
             compatibility_mode: true,  // Default to true for maximum compatibility
+            remove_audio: false,  // Default to keeping audio
         }
     }
 }

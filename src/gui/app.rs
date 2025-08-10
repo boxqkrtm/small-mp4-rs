@@ -145,6 +145,7 @@ impl SmallMp4App {
                 "memory_optimization" => "메모리 최적화".to_string(),
                 "advanced_settings" => "고급 설정".to_string(),
                 "compatibility_mode" => "호환성 모드 (x264 only)".to_string(),
+                "remove_audio" => "사운드 제거".to_string(),
                 _ => key.to_string(),
             },
             Language::Japanese => match key {
@@ -170,6 +171,7 @@ impl SmallMp4App {
                 "memory_optimization" => "メモリ最適化".to_string(),
                 "advanced_settings" => "詳細設定".to_string(),
                 "compatibility_mode" => "互換性モード (x264のみ)".to_string(),
+                "remove_audio" => "音声を削除".to_string(),
                 _ => key.to_string(),
             },
             Language::English => match key {
@@ -195,6 +197,7 @@ impl SmallMp4App {
                 "memory_optimization" => "Memory optimization".to_string(),
                 "advanced_settings" => "Advanced Settings".to_string(),
                 "compatibility_mode" => "Compatibility mode (x264 only)".to_string(),
+                "remove_audio" => "Remove audio".to_string(),
                 _ => key.to_string(),
             },
         }
@@ -429,7 +432,24 @@ impl SmallMp4App {
             }
         };
         
-        ui.checkbox(&mut compatibility_mode, self.get_text("compatibility_mode"));
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut compatibility_mode, self.get_text("compatibility_mode"));
+            
+            // Remove audio checkbox
+            let mut remove_audio = {
+                if let Ok(state_guard) = self.state.lock() {
+                    state_guard.compression_settings.remove_audio
+                } else {
+                    false
+                }
+            };
+            
+            ui.checkbox(&mut remove_audio, self.get_text("remove_audio"));
+            
+            if let Ok(mut state_guard) = self.state.lock() {
+                state_guard.compression_settings.remove_audio = remove_audio;
+            }
+        });
         
         if let Ok(mut state_guard) = self.state.lock() {
             state_guard.compression_settings.compatibility_mode = compatibility_mode;

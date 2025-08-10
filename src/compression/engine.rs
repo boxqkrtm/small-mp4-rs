@@ -507,7 +507,11 @@ impl CompressionEngine {
         }
         
         // Configure audio encoding
-        if metadata.has_audio {
+        if settings.remove_audio || !metadata.has_audio {
+            // User wants to remove audio OR no audio stream exists
+            cmd.arg("-an");
+        } else {
+            // Keep and encode audio
             let audio_bitrate = if metadata.duration_seconds > 600.0 {
                 "96k"  // 96 kbps for videos > 10 minutes
             } else if metadata.duration_seconds > 300.0 {
@@ -519,9 +523,6 @@ impl CompressionEngine {
             cmd.arg("-c:a").arg("aac");
             cmd.arg("-b:a").arg(audio_bitrate);
             cmd.arg("-ac").arg("2"); // Stereo
-        } else {
-            // No audio stream - remove audio from output
-            cmd.arg("-an");
         }
         
         // Output format settings
@@ -547,8 +548,8 @@ impl CompressionEngine {
         let total_bits = target_mb * 8.0 * 1024.0 * 1024.0;
         
         // Dynamic audio bitrate calculation
-        // Only reserve space for audio if the video has audio
-        let (audio_bitrate, audio_bits) = if metadata.has_audio {
+        // Only reserve space for audio if the video has audio AND we're keeping it
+        let (audio_bitrate, audio_bits) = if metadata.has_audio && !settings.remove_audio {
             let bitrate = if duration_seconds > 600.0 {
                 96.0  // 96 kbps for videos > 10 minutes
             } else if duration_seconds > 300.0 {
@@ -558,7 +559,7 @@ impl CompressionEngine {
             };
             (bitrate, bitrate * 1024.0 * duration_seconds)
         } else {
-            (0.0, 0.0)  // No audio, no bits reserved
+            (0.0, 0.0)  // No audio or removing audio, no bits reserved
         };
         
         // Reserve 1% for container overhead (reduced from 2%)
