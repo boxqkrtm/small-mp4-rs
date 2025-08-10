@@ -702,6 +702,7 @@ impl SmallMp4App {
                         if let Ok(mut state_guard) = app_state.lock() {
                             state_guard.status = CompressionStatus::Idle;
                             state_guard.progress = 1.0; // 100% complete
+                            state_guard.last_compression_result = Some((result.input_size_mb, result.output_size_mb));
                             state_guard.show_completion_popup = true; // Show completion popup
                         }
                     }
@@ -736,29 +737,35 @@ impl SmallMp4App {
     }
     
     fn draw_completion_popup(&mut self, ctx: &egui::Context) {
-        let show_popup = {
+        let (show_popup, compression_result) = {
             if let Ok(state_guard) = self.state.lock() {
-                state_guard.show_completion_popup
+                (state_guard.show_completion_popup, state_guard.last_compression_result)
             } else {
-                false
+                (false, None)
             }
         };
         
         if show_popup {
-            let (title, message, button_text) = match self.config.language {
+            let (title, message, size_before_text, size_after_text, button_text) = match self.config.language {
                 Language::Korean => (
                     "압축 완료!",
                     "✅ 비디오 압축이 완료되었습니다!",
+                    "압축 전:",
+                    "압축 후:",
                     "확인"
                 ),
                 Language::Japanese => (
                     "圧縮完了！",
                     "✅ ビデオ圧縮が完了しました！",
+                    "圧縮前:",
+                    "圧縮後:",
                     "OK"
                 ),
                 Language::English => (
                     "Compression Complete!",
                     "✅ Video compression completed successfully!",
+                    "Before:",
+                    "After:",
                     "OK"
                 ),
             };
@@ -772,6 +779,31 @@ impl SmallMp4App {
                         ui.add_space(10.0);
                         ui.label(message);
                         ui.add_space(10.0);
+                        
+                        // Show file sizes if available
+                        if let Some((input_size, output_size)) = compression_result {
+                            ui.separator();
+                            ui.add_space(5.0);
+                            
+                            // Size comparison in a nice layout
+                            ui.horizontal(|ui| {
+                                ui.label(size_before_text);
+                                ui.strong(format!("{:.1} MB", input_size));
+                                ui.label("→");
+                                ui.label(size_after_text);
+                                ui.strong(format!("{:.1} MB", output_size));
+                            });
+                            
+                            // Show compression ratio
+                            let compression_ratio = (1.0 - output_size / input_size) * 100.0;
+                            ui.add_space(5.0);
+                            ui.label(format!("({:.1}% smaller)", compression_ratio));
+                            
+                            ui.add_space(5.0);
+                        }
+                        
+                        ui.separator();
+                        ui.add_space(5.0);
                         
                         ui.horizontal(|ui| {
                             if ui.button(button_text).clicked() {

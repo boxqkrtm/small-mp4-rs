@@ -28,6 +28,9 @@ pub struct AppState {
     
     // UI popups
     pub show_completion_popup: bool,
+    
+    // Compression result info
+    pub last_compression_result: Option<(f64, f64)>, // (input_size_mb, output_size_mb)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -67,6 +70,7 @@ impl Default for AppState {
             compressed_preview: None,
             last_error: None,
             show_completion_popup: false,
+            last_compression_result: None,
         }
     }
 }
