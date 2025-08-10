@@ -1,0 +1,84 @@
+[package]
+name = "small-mp4"
+version = "0.2.0"
+edition = "2021"
+authors = ["Small MP4 Team <team@small-mp4.com>"]
+description = "Squeeze your videos for easy sharing - Now with hardware acceleration!"
+license = "MIT"
+repository = "https://github.com/small-mp4/small-mp4-rs"
+keywords = ["video", "compression", "ffmpeg", "cuda", "hardware-acceleration"]
+categories = ["multimedia::video", "command-line-utilities"]
+
+[dependencies]
+# Core dependencies
+clap = { version = "4.0", features = ["derive", "cargo"] }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# FFmpeg is used via command line for video compression
+
+# GUI dependencies
+eframe = "0.29"
+egui_extras = "0.29"
+rfd = "0.15"
+
+# System information and hardware detection
+sysinfo = "0.30"
+
+# Logging and monitoring  
+log = "0.4"
+env_logger = "0.11"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# File handling
+walkdir = "2.0"
+
+# Configuration
+config = "0.14"
+
+[features]
+default = ["hardware-accel", "cli", "gui"]
+
+# Hardware acceleration features
+hardware-accel = ["cuda", "amd", "intel", "vaapi", "videotoolbox"]
+cuda = []
+amd = []
+intel = []
+vaapi = []
+videotoolbox = []
+
+# Interface features
+cli = []
+gui = []
+
+# Development features
+benchmarks = []
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3.0"
+test-case = "3.0"
+
+[[bin]]
+name = "small-mp4"
+path = "src/main.rs"
+
+# Benchmarks are optional and can be added later
+# [[bench]]
+# name = "encoding_benchmark"
+# harness = false
+# required-features = ["benchmarks"]
+
+# Build configuration for different platforms
+[target.'cfg(target_os = "linux")'.dependencies]
+# Add Linux-specific dependencies for VAAPI if needed
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Add macOS-specific dependencies for VideoToolbox if needed
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Add Windows-specific dependencies if needed
