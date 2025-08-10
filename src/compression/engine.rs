@@ -484,14 +484,14 @@ impl CompressionEngine {
             HardwareEncoder::NvencH264 | HardwareEncoder::NvencH265 | HardwareEncoder::NvencAV1 => {
                 let preset = settings.hardware_preset.nvenc_preset();
                 cmd.arg("-preset").arg(preset);
-                // NVENC uses multipass for better quality
-                cmd.arg("-rc").arg("vbr");
-                cmd.arg("-multipass").arg("fullres");
-                cmd.arg("-cq").arg("0");
+                // Use CBR for precise size control
+                cmd.arg("-rc").arg("cbr");
+                // Remove multipass for CBR mode
+                cmd.arg("-cbr").arg("true");
             },
             HardwareEncoder::AmfH264 | HardwareEncoder::AmfH265 => {
                 cmd.arg("-quality").arg("speed");
-                cmd.arg("-rc").arg("vbr_latency");
+                cmd.arg("-rc").arg("cbr");
             },
             HardwareEncoder::QsvH264 | HardwareEncoder::QsvH265 | HardwareEncoder::QsvAV1 => {
                 cmd.arg("-preset").arg("medium");
