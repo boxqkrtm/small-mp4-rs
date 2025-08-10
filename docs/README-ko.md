@@ -1,6 +1,12 @@
 # 🎬 Small MP4 - 모던 비디오 압축기
 
+<div align="center">
+
+[English](README-en.md) | [한국어](README-ko.md) | [日本語](README-ja.md)
+
 > 동영상 공유를 위해서 영상을 꾸겨줍니다
+
+</div>
 
 Rust와 egui로 제작된 하드웨어 가속 지원 네이티브 GUI 비디오 압축 도구입니다.
 

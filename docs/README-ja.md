@@ -1,6 +1,12 @@
 # 🎬 Small MP4 - モダンビデオ圧縮ツール
 
+<div align="center">
+
+[English](README-en.md) | [한국어](README-ko.md) | [日本語](README-ja.md)
+
 > 動画共有のために映像を圧縮します
+
+</div>
 
 RustとeguiでハードウェアアクセラレーションをサポートしたネイティブGUIビデオ圧縮ツールです。
 
